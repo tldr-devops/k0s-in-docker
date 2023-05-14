@@ -1,5 +1,7 @@
 # K0S in Docker Swarm (and Compose)
 
+Currently kube-proxy and kube-router doesn't work properly with HA controller: https://github.com/k0sproject/k0s/issues/3120
+
 Based on [k0s-in-docker](https://docs.k0sproject.io/v1.27.1+k0s.0/k0s-in-docker/).
 
 Pro:
