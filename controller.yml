@@ -5,10 +5,10 @@ secrets:
     file: ./secrets/ca.crt
   ca.key:
     file: ./secrets/ca.key
-  #controller.token:
-  #  file: ./secrets/controller.token
-  #secret_controller.yaml:
-  #  file: ./secrets/secret_controller.yaml
+  controller.token:
+    file: ./secrets/controller.token
+  secret_controller.yaml:
+    file: ./secrets/secret_controller.yaml
   worker.token:
     file: ./secrets/worker.token
   secret_worker.yaml:
@@ -31,12 +31,12 @@ x-service: &service
         #delay: 60s
     tmpfs:
       - /run
-      - /var/run
+      #- /var/run
     secrets:
       - ca.crt
       - ca.key
-      #- controller.token
-      #- secret_controller.yaml
+      - controller.token
+      - secret_controller.yaml
       - secret_worker.yaml
     #ports:
       #- "6443:6443"
@@ -73,7 +73,7 @@ x-service: &service
                 initial-advertise-peer-urls: "https://$$HOSTNAME:2380,https://$$IP:2380"
             type: etcd
           network:
-            provider: calico # calico, kuberouter or custom
+            provider: $${NETWORK_PROVIDER} # calico, kuberouter or custom
             podCIDR: 10.244.0.0/16
             serviceCIDR: 10.96.0.0/12
             calico:
@@ -85,8 +85,13 @@ x-service: &service
               flexVolumeDriverPath: /usr/libexec/k0s/kubelet-plugins/volume/exec/nodeagent~uds
               withWindowsNodes: false
               overlay: Always
-            #kubeProxy:
-              #mode:  iptables # iptables, ipvs, userspace
+            kuberouter:
+              autoMTU: true
+              mtu: 0
+              peerRouterASNs: ""
+              peerRouterIPs: ""
+            kubeProxy:
+              mode: iptables # iptables, ipvs, userspace
           #extensions:
             #helm:
               #concurrencyLevel: 5
@@ -96,6 +101,7 @@ x-service: &service
                 #- name: projectcalico
                   #url: https://docs.tigera.io/calico/charts
               #charts:
+                # https://docs.tigera.io/calico/latest/getting-started/kubernetes/helm
                 #- name: calico
                   #chartname: projectcalico/tigera-operator
                   #version: "v3.25.1"
@@ -124,11 +130,18 @@ x-service: &service
       apk add gettext
       apk add etcd-ctl --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
-      #if [[ ! -f /usr/bin/calicoctl ]]; then
-        #curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
-        #ln -s /usr/bin/calicoctl /usr/bin/kubectl-calico
-        #chmod +x /usr/bin/calicoctl
-      #fi
+      if [[ ! -f /usr/bin/calicoctl ]]; then
+        curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
+        ln -s /usr/bin/calicoctl /usr/bin/kubectl-calico
+        chmod +x /usr/bin/calicoctl
+      fi
+
+      NETWORK_PROVIDER=calico
+      if calicoctl node checksystem 2>&1 | grep -q "System doesn't meet"
+      then
+        NETWORK_PROVIDER=kuberouter
+      fi
+      export NETWORK_PROVIDER=$$NETWORK_PROVIDER
 
       mkdir -p /var/lib/k0s/pki/etcd
       mkdir -p /var/lib/k0s/manifests
@@ -169,7 +182,7 @@ x-service: &service
         echo -n "$$K0S_CONFIG" | envsubst > /etc/k0s/config.yaml
       fi
 
-      k0s controller --config=/etc/k0s/config.yaml --enable-metrics-scraper #--token-file /var/lib/k0s/pki/controller.token
+      k0s controller --config=/etc/k0s/config.yaml --enable-metrics-scraper --token-file /run/secrets/controller.token
     # https://docs.docker.com/compose/compose-file/compose-file-v3/#healthcheck
     # https://docs.docker.com/engine/reference/builder/#healthcheck
     healthcheck:

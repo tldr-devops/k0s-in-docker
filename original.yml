@@ -2,7 +2,7 @@ version: "3.9"
 services:
   k0s:
     container_name: k0s
-    image: docker.io/k0sproject/k0s:latest
+    image: docker.io/k0sproject/k0s:v1.26.4-k0s.0 #latest
     command: k0s controller --config=/etc/k0s/config.yaml --enable-worker
     hostname: k0s
     privileged: true

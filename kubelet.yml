@@ -26,9 +26,7 @@ services:
       # - /data/kubelet:/var/lib/k0s
       - /dev:/dev
       - /var/log:/var/log
-      #- /sys:/sys
-      #- /run:/run
-      #- /var/run:/var/run
+      - /run:/run
     #pid: host
     uts: host
     network_mode: host
@@ -55,33 +53,33 @@ services:
       # echo "127.0.0.1 k0s" >> /etc/hosts
       echo "$$(hostname -i) k0s" >> /etc/hosts
 
-      if [[ ! -f /usr/bin/calicoctl ]]; then
-        curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
-        ln -s /usr/bin/calicoctl /usr/bin/kubectl-calico
-        chmod +x /usr/bin/calicoctl
-      fi
+      #if [[ ! -f /usr/bin/calicoctl ]]; then
+        #curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
+        #ln -s /usr/bin/calicoctl /usr/bin/kubectl-calico
+        #chmod +x /usr/bin/calicoctl
+      #fi
 
       bash /entrypoint.sh
       #export TINI_SUBREAPER=true # if you run kubelet in host pid namespace = tiny supervisor doesn't have PID 1
-      k0s worker --token-file /run/secrets/worker.token $$LABELS $$TAINTS
+      tiny -- k0s worker --token-file /run/secrets/worker.token $$LABELS $$TAINTS
     logging:
       driver: json-file
       options:
         max-size: "100m"
         max-file: "2"
-    healthcheck:
-      test: |
-        curl -s http://localhost:10255/healthz
-        # https://www.deepnetwork.com/blog/2020/01/13/kubelet-api.html
-        # https://stackoverflow.com/questions/35075195/is-there-api-documentation-for-kubelet-api
-      # interval in which the healthcheck process will execute
-      interval: 5s
-      # time duration to wait for a healthcheck
-      timeout: 5s
-      # define the number of tries to implement the health check after failure
-      retries: 5
-      # initialization time for containers that need time to bootstrap
-      start_period: 5s
+    #healthcheck:
+      #test: |
+        #curl -s http://localhost:10255/healthz
+        ## https://www.deepnetwork.com/blog/2020/01/13/kubelet-api.html
+        ## https://stackoverflow.com/questions/35075195/is-there-api-documentation-for-kubelet-api
+      ## interval in which the healthcheck process will execute
+      #interval: 5s
+      ## time duration to wait for a healthcheck
+      #timeout: 5s
+      ## define the number of tries to implement the health check after failure
+      #retries: 5
+      ## initialization time for containers that need time to bootstrap
+      #start_period: 60s
 
 #docker run -d --name k0s-worker1 \
 #--hostname docker-01 --privileged \

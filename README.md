@@ -41,6 +41,13 @@ docker-compose -f controller.yml ps
 4) start kubelet
 ```
 export HOSTNAME=$(hostname)
+# for calico
+modprobe ipt_ipvs xt_addrtype ip6_tables \
+ip_tables nf_conntrack_netlink xt_u32 \
+xt_icmp xt_multiport xt_set vfio-pci \
+xt_bpf ipt_REJECT ipt_set xt_icmp6 \
+xt_mark ip_set ipt_rpfilter \
+xt_rpfilter xt_conntrack
 docker-compose -f kubelet.yml up -d
 ```
 
