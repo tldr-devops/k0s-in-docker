@@ -51,7 +51,7 @@ services:
       #cat /run/secrets/ca.crt > /var/lib/k0s/pki/ca.crt
 
       # echo "127.0.0.1 k0s" >> /etc/hosts
-      echo "$$(hostname -i) k0s" >> /etc/hosts
+      echo "$$(hostname -i) k0s kubernetes" >> /etc/hosts
 
       #if [[ ! -f /usr/bin/calicoctl ]]; then
         #curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
@@ -61,7 +61,7 @@ services:
 
       bash /entrypoint.sh
       #export TINI_SUBREAPER=true # if you run kubelet in host pid namespace = tiny supervisor doesn't have PID 1
-      tiny -- k0s worker --token-file /run/secrets/worker.token $$LABELS $$TAINTS
+      k0s worker --token-file /run/secrets/worker.token $$LABELS $$TAINTS
     logging:
       driver: json-file
       options:

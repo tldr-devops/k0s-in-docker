@@ -6,14 +6,11 @@ Pro:
 - Easier manage and rolling update of control components with docker swarm + automatic migration to other hosts in case of failure.
 
 Const:
-- Kubelet (k0s worker) should be started directly on host (without docker), at least because network component can manage iptables only in bridge network.
-In addition, restart of kubelet in docker possibly will affect all pods inside it's docker container...
+- Kubelet (k0s worker) should be started directly on host (without docker), at least because restart of kubelet in docker possibly will affect all pods inside it's docker container...
 - You should setup and manage synching of data path or volumes storage between control nodes if you want live migration of k0s control containers between nodes.
 
 Time track:
 - [Filipp Frizzy](https://github.com/Friz-zy/): 
-
-[Short intro into Swarm](https://gabrieltanner.org/blog/docker-swarm/).
 
 ## Setup
 
@@ -35,10 +32,10 @@ Wait untill all k0s containers will have status `(healthy)`
 docker-compose -f controller.yml ps
 ```
 
-3) create worker join token
+create worker join token if you don't use static pregenerated one
 `docker-compose -f controller.yml exec k0s-1 k0s token create --role worker > ./secrets/worker.token`
 
-4) start kubelet
+3) start kubelet
 ```
 export HOSTNAME=$(hostname)
 # for calico
@@ -50,6 +47,10 @@ xt_mark ip_set ipt_rpfilter \
 xt_rpfilter xt_conntrack
 docker-compose -f kubelet.yml up -d
 ```
+
+### Docker Swarm
+
+[Short intro into Swarm](https://gabrieltanner.org/blog/docker-swarm/).
 
 ## Known problems
 
@@ -127,6 +128,9 @@ k0s kubectl get endpoints -A
 k0s kubectl get users,roles,rolebindings,clusterroles -A
 k0s kubectl get events -A
 ```
+
+### Check k0s dynamic config (if enabled)
+`k0s config status`
 
 ### Get member list of etcd cluster
 ```

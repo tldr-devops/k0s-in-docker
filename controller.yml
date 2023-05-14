@@ -53,6 +53,7 @@ x-service: &service
             sans:
               - 127.0.0.1
               - localhost
+              - kubernetes
               - k0s
               - k0s-1
               - k0s-2
@@ -73,7 +74,7 @@ x-service: &service
                 initial-advertise-peer-urls: "https://$$HOSTNAME:2380,https://$$IP:2380"
             type: etcd
           network:
-            provider: $${NETWORK_PROVIDER} # calico, kuberouter or custom
+            #provider: $${NETWORK_PROVIDER} # calico, kuberouter or custom
             podCIDR: 10.244.0.0/16
             serviceCIDR: 10.96.0.0/12
             calico:
@@ -122,7 +123,7 @@ x-service: &service
     - |
       export IP=$$(hostname -i)
       export HOSTNAME=$$(hostname)
-      echo $$IP k0s >> /etc/hosts
+      echo $$IP k0s kubernetes >> /etc/hosts
 
       # install dig and nslookup for debug dns
       apk add bind-tools iproute2-ss
@@ -130,18 +131,18 @@ x-service: &service
       apk add gettext
       apk add etcd-ctl --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
-      if [[ ! -f /usr/bin/calicoctl ]]; then
-        curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
-        ln -s /usr/bin/calicoctl /usr/bin/kubectl-calico
-        chmod +x /usr/bin/calicoctl
-      fi
+      #if [[ ! -f /usr/bin/calicoctl ]]; then
+        #curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
+        #ln -s /usr/bin/calicoctl /usr/bin/kubectl-calico
+        #chmod +x /usr/bin/calicoctl
+      #fi
 
-      NETWORK_PROVIDER=calico
-      if calicoctl node checksystem 2>&1 | grep -q "System doesn't meet"
-      then
-        NETWORK_PROVIDER=kuberouter
-      fi
-      export NETWORK_PROVIDER=$$NETWORK_PROVIDER
+      #NETWORK_PROVIDER=calico
+      #if calicoctl node checksystem 2>&1 | grep -q "System doesn't meet"
+      #then
+        #NETWORK_PROVIDER=kuberouter
+      #fi
+      #export NETWORK_PROVIDER=$$NETWORK_PROVIDER
 
       mkdir -p /var/lib/k0s/pki/etcd
       mkdir -p /var/lib/k0s/manifests
@@ -182,7 +183,7 @@ x-service: &service
         echo -n "$$K0S_CONFIG" | envsubst > /etc/k0s/config.yaml
       fi
 
-      k0s controller --config=/etc/k0s/config.yaml --enable-metrics-scraper --token-file /run/secrets/controller.token
+      k0s controller --config=/etc/k0s/config.yaml --enable-metrics-scraper --token-file /run/secrets/controller.token #--enable-dynamic-config
     # https://docs.docker.com/compose/compose-file/compose-file-v3/#healthcheck
     # https://docs.docker.com/engine/reference/builder/#healthcheck
     healthcheck:
