@@ -5,6 +5,10 @@ secrets:
     file: ./secrets/ca.crt
   ca.key:
     file: ./secrets/ca.key
+  sa.pub:
+    file: ./secrets/sa.pub
+  sa.key:
+    file: ./secrets/sa.key
   controller.token:
     file: ./secrets/controller.token
   secret_controller.yaml:
@@ -15,7 +19,7 @@ secrets:
     file: ./secrets/secret_worker.yaml
 
 x-service: &service
-    image: 'docker.io/k0sproject/k0s:v1.26.4-k0s.0' # v1.27.1-k0s.0 # docker.io/k0sproject/k0s:latest
+    image: 'docker.io/k0sproject/k0s:v1.27.1-k0s.0' # docker.io/k0sproject/k0s:latest
     logging:
       driver: json-file
       options:
@@ -35,6 +39,8 @@ x-service: &service
     secrets:
       - ca.crt
       - ca.key
+      - sa.pub
+      - sa.key
       - controller.token
       - secret_controller.yaml
       - secret_worker.yaml

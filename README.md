@@ -1,7 +1,5 @@
 # K0S in Docker Swarm (and Compose)
 
-Currently kube-proxy and kube-router doesn't work properly with HA controller: https://github.com/k0sproject/k0s/issues/3120
-
 Based on [k0s-in-docker](https://docs.k0sproject.io/v1.27.1+k0s.0/k0s-in-docker/).
 
 Pro:
@@ -12,7 +10,7 @@ Const:
 - You should setup and manage synching of data path or volumes storage between control nodes if you want live migration of k0s control containers between nodes.
 
 Time track:
-- [Filipp Frizzy](https://github.com/Friz-zy/): 
+- [Filipp Frizzy](https://github.com/Friz-zy/): 43h 15m
 
 ## Setup
 
@@ -66,7 +64,7 @@ ETCD cluster need some time (5 mins?) to detect hard powered off member.
 
 Single etcd node should be at least restarted with new parameters to become a cluster with two other nodes.
 
-### worker kubeproxy & coredns work only with network 'bridge'
+### worker kubeproxy & coredns work only with network 'bridge' or 'host'
 
 ```
     #deploy:

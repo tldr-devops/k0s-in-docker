@@ -11,7 +11,7 @@ secrets:
 
 services:
   kubelet:
-    image: 'docker.io/k0sproject/k0s:v1.26.4-k0s.0' # v1.27.1-k0s.0 # docker.io/k0sproject/k0s:latest
+    image: 'docker.io/k0sproject/k0s:v1.27.1-k0s.0' # docker.io/k0sproject/k0s:latest
     #hostname: ${HOSTNAME}
     #container_name: kubelet
     restart: unless-stopped
