@@ -1,5 +1,7 @@
 # K0S in Docker Swarm (and Compose)
 
+[Stand with Belarus against dictatorship <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Presidential_Standard_of_Belarus_%28fictional%29.svg/240px-Presidential_Standard_of_Belarus_%28fictional%29.svg.png" width="20" height="20" alt="Voices From Belarus" />](https://bysol.org/en/) [![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://vshymanskyy.github.io/StandWithUkraine)
+
 Based on [k0s-in-docker](https://docs.k0sproject.io/v1.27.1+k0s.0/k0s-in-docker/).
 
 Pro:
@@ -11,6 +13,14 @@ Const:
 
 Time track:
 - [Filipp Frizzy](https://github.com/Friz-zy/): 43h 15m
+
+### Support
+
+You can support this or other my projects:
+  - [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/filipp_frizzy)
+  - [donationalerts.com/r/filipp_frizzy](https://www.donationalerts.com/r/filipp_frizzy)
+  - ETH 0xCD9fC1719b9E174E911f343CA2B391060F931ff7
+  - BTC bc1q8fhsj24f5ncv3995zk9v3jhwwmscecc6w0tdw3
 
 ## Setup
 
@@ -32,7 +42,7 @@ Wait untill all k0s containers will have status `(healthy)`
 docker-compose -f controller.yml ps
 ```
 
-create worker join token if you don't use static pregenerated one
+Optional create worker join token if you don't use static pregenerated one
 `docker-compose -f controller.yml exec k0s-1 k0s token create --role worker > ./secrets/worker.token`
 
 3) start kubelet
@@ -50,21 +60,22 @@ docker-compose -f kubelet.yml up -d
 
 ### Docker Swarm
 
-[Short intro into Swarm](https://gabrieltanner.org/blog/docker-swarm/).
+* [Short intro into Swarm](https://gabrieltanner.org/blog/docker-swarm/)
+* [Extended tutorial](https://dockerswarm.rocks/)
 
 ## Known problems
 
-### ETCD health status delay
+### * ETCD health status delay
 - https://github.com/etcd-io/etcd/issues/2711
 - https://github.com/etcd-io/etcd/issues/2340
 
 ETCD cluster need some time (5 mins?) to detect hard powered off member.
 
-### Scale k0s from 1 container to 3 and more
+### * Scale k0s from 1 container to 3 and more
 
 Single etcd node should be at least restarted with new parameters to become a cluster with two other nodes.
 
-### worker kubeproxy & coredns work only with network 'bridge' or 'host'
+### * Worker kubeproxy & coredns work only with network 'bridge' or 'host'
 
 ```
     #deploy:
@@ -80,25 +91,25 @@ Single etcd node should be at least restarted with new parameters to become a cl
     network_mode: "bridge"
 ```
 
-### [k0s Manifest Deployer](https://docs.k0sproject.io/v1.27.1+k0s.0/manifests/) load manifests only from first level directories under `/var/lib/k0s/manifests`
+### * [k0s Manifest Deployer](https://docs.k0sproject.io/v1.27.1+k0s.0/manifests/) load manifests only from first level directories under `/var/lib/k0s/manifests`
 
 You can check that controller imported all secrets for tokens: `k0s kubectl get secrets -A`.
 
-### `Error: configmaps "worker-config-default-1.27" is forbidden: User "system:node:<NODENAME>" cannot get resource "configmaps" in API group "" in the namespace "kube-system": no relationship found between node '<NODENAME>' and this object`
+### * `Error: configmaps "worker-config-default-1.27" is forbidden: User "system:node:<NODENAME>" cannot get resource "configmaps" in API group "" in the namespace "kube-system": no relationship found between node '<NODENAME>' and this object`
 
 Problem with [Node Authorization](https://kubernetes.io/docs/reference/access-authn-authz/node/).
 I got this problem with pregenered worker token and fixed it by generating new join token after controller start.
 
-### `error mounting "cgroup" to rootfs at "/sys/fs/cgroup"`
+### * `error mounting "cgroup" to rootfs at "/sys/fs/cgroup"`
 
 Don't mount `/sys:/sys:ro`
 
-### Calico node failed with error `felix/table.go 1321: Failed to execute ip(6)tables-restore command error=exit status 2 errorOutput="iptables-restore v1.8.4 (legacy): Couldn't load match `rpfilter':No such file or directory\n\nError occurred at line: 10\nTry `iptables-restore -h' or 'iptables-restore --help' for more information.\n"`
+### * Calico node failed with error `felix/table.go 1321: Failed to execute ip(6)tables-restore command error=exit status 2 errorOutput="iptables-restore v1.8.4 (legacy): Couldn't load match `rpfilter':No such file or directory\n\nError occurred at line: 10\nTry `iptables-restore -h' or 'iptables-restore --help' for more information.\n"`
 
 Possibly `xt_rpfilter` kernel module is missing, you can check with this command in kubelet container:
 `calicoctl node checksystem`
 
-### Kube-proxy failed with some iptables error
+### * Kube-proxy failed with some iptables error
 
 Possibly some kernel modules missed or maybe kube-proxy version can't work with your system.
 I got something like this with k0s v1.27.1-k0s.0 on old boot-to-docker vm with 4.19.130-boot2docker kernel.
@@ -110,11 +121,11 @@ https://www.tencentcloud.com/document/product/457/51209
 Controller containers contain tools like kubectl and etcdctl for managing cluster.
 You can use it for debug or control with admin privileges:
 
-### Get k0s cluster health status
+### * Get k0s cluster health status
 
 `k0s kubectl get --raw='/livez?verbose'`
 
-### Get all existed stuff in cluster
+### * Get all existed stuff in cluster
 
 ```
 k0s kubectl get all -A
@@ -129,10 +140,10 @@ k0s kubectl get users,roles,rolebindings,clusterroles -A
 k0s kubectl get events -A
 ```
 
-### Check k0s dynamic config (if enabled)
+### * Check k0s dynamic config (if enabled)
 `k0s config status`
 
-### Get member list of etcd cluster
+### * Get member list of etcd cluster
 ```
 etcdctl --endpoints=https://127.0.0.1:2379 \
 --key=/var/lib/k0s/pki/etcd/server.key \
@@ -143,7 +154,7 @@ member list
 or
 `k0s etcd member-list`
 
-### Get etcd member endpoint status and health
+### * Get etcd member endpoint status and health
 
 ```
 etcdctl --endpoints=https://127.0.0.1:2379 \
