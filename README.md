@@ -6,14 +6,18 @@
 Based on [k0s-in-docker](https://docs.k0sproject.io/v1.27.1+k0s.0/k0s-in-docker/).
 
 Pro:
-- Easier manage and rolling update of control components with docker swarm + automatic migration to other hosts in case of failure.
+- Easier management and rolling updates of control components with Docker Swarm, including automatic migration to other hosts in case of failure.
 
 Const:
-- Kubelet (k0s worker) should be started directly on host (without docker), at least because restart of kubelet in docker possibly will affect all pods inside it's docker container...
-- You should setup and manage synching of data path or volumes storage between control nodes if you want live migration of k0s control containers between nodes.
+- Better would be start kubelet (k0s worker) directly on the host, without Docker. This is important because restarting kubelet within Docker could potentially impact all the pods running inside the Docker container.
+- If you want to achieve live migration of k0s control containers between nodes, you need to set up and manage data path or volume storage synchronization between control nodes.
+
+Alternatively, you can consider running Kubernetes within Kubernetes using the following projects:
+- [K0smotron](https://github.com/k0sproject/k0smotron)
+- [Kubernetes-in-Kubernetes](https://github.com/kubefarm/kubernetes-in-kubernetes)
 
 Time track:
-- [Filipp Frizzy](https://github.com/Friz-zy/): 43h 15m
+- [Filipp Frizzy](https://github.com/Friz-zy/): 46h 05m
 
 ### About the Author
 
@@ -49,21 +53,22 @@ Thank you for considering supporting my work. Your involvement and contributions
 1) generate secrets (only once per cluster).
 This command populate `./secrets` directory near yaml files and exit with code 0
 ```
-docker-compose -f generate-secrets.yml up
+docker compose -f generate-secrets.yml up
 ```
 
 2) start controller
 ```
-docker-compose -f controller.yml up -d
+docker compose -f controller.yml up -d
 ```
 
-Wait untill all k0s containers will have status `(healthy)`
+Wait untill all k0s containers up and running
 ```
-docker-compose -f controller.yml ps
+docker compose -f controller.yml ps
+docker compose -f controller.yml exec k0s-1 k0s kubectl get --raw='/livez?verbose'
 ```
 
 Optional create worker join token if you don't use static pregenerated one
-`docker-compose -f controller.yml exec k0s-1 k0s token create --role worker > ./secrets/worker.token`
+`docker compose -f controller.yml exec k0s-1 k0s token create --role worker > ./secrets/worker.token`
 
 3) start kubelet
 ```
@@ -75,7 +80,7 @@ xt_icmp xt_multiport xt_set vfio-pci \
 xt_bpf ipt_REJECT ipt_set xt_icmp6 \
 xt_mark ip_set ipt_rpfilter \
 xt_rpfilter xt_conntrack
-docker-compose -f kubelet.yml up -d
+docker compose -f kubelet.yml up -d
 ```
 
 ### Docker Swarm
@@ -86,7 +91,7 @@ docker-compose -f kubelet.yml up -d
 1) generate secrets (only once per cluster).
 This command populate `./secrets` directory near yaml files and exit with code 0
 ```
-docker-compose -f generate-secrets.yml up
+docker compose -f generate-secrets.yml up
 ```
 
 2) [setup docker swarm](https://docs.docker.com/engine/reference/commandline/swarm_init/)
@@ -99,9 +104,11 @@ docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
 docker stack deploy --compose-file controller.yml k0s
 ```
 
-Wait untill all k0s containers will have status `(healthy)`
+Wait untill all k0s containers up and running
 ```
-docker stack ps
+docker stack ps k0s
+docker service ls
+docker service exec k0s-1 k0s kubectl get --raw='/livez?verbose'
 ```
 
 4) start kubelet
@@ -120,6 +127,10 @@ ETCD cluster need some time (5 mins?) to detect hard powered off member.
 ### * Scale k0s from 1 container to 3 and more
 
 Single etcd node should be at least restarted with new parameters to become a cluster with two other nodes.
+
+### Docker Swarm doesn't resolve IP of container into DNS name
+Docker Swarm doesn't resolve IP of container into DNS name while container health is not `healthy`.
+As we need DNS resolution for getting containers up, I disabled healthcheck =(
 
 ### * Worker kubeproxy & coredns work only with network 'bridge' or 'host'
 
