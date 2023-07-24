@@ -28,6 +28,7 @@ x-service: &service
     restart: unless-stopped
     privileged: true
     deploy:
+      endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
       update_config:
@@ -73,11 +74,12 @@ x-service: &service
               # https://etcd.io/docs/v3.3/op-guide/clustering/
               # https://etcd.io/docs/v3.1/op-guide/configuration/
               # https://serverfault.com/questions/1070303/etcd-cluster-configuration-for-kubernetes-which-one-should-be-considered
+              peerAddress: "$$IP"
               extraArgs:
                 listen-peer-urls: "https://0.0.0.0:2380"
                 listen-client-urls: "https://0.0.0.0:2379"
-                advertise-client-urls: "https://$${IP}:2379"
-                initial-advertise-peer-urls: "https://$$HOSTNAME:2380,https://$$IP:2380"
+                advertise-client-urls: "https://$$IP:2380"
+                initial-advertise-peer-urls: "https://$$IP:2380"
             type: etcd
           network:
             #provider: $${NETWORK_PROVIDER} # calico, kuberouter or custom
@@ -98,7 +100,7 @@ x-service: &service
               peerRouterASNs: ""
               peerRouterIPs: ""
             kubeProxy:
-              mode: iptables # iptables, ipvs, userspace
+              mode: iptables # iptables, ipvs
           #extensions:
             #helm:
               #concurrencyLevel: 5
@@ -126,15 +128,12 @@ x-service: &service
     # override default entrypoint for saving docker DNS
     entrypoint: ["/bin/bash", "-c"]
     command:
-    - |
+    - |-
       export IP=$$(hostname -i)
       export HOSTNAME=$$(hostname)
       echo $$IP k0s kubernetes >> /etc/hosts
 
-      # install dig and nslookup for debug dns
-      apk add bind-tools iproute2-ss
-
-      apk add gettext
+      apk add bind-tools iproute2-ss openssl gettext
       apk add etcd-ctl --repository=https://dl-cdn.alpinelinux.org/alpine/edge/testing
 
       #if [[ ! -f /usr/bin/calicoctl ]]; then
@@ -149,6 +148,25 @@ x-service: &service
         #NETWORK_PROVIDER=kuberouter
       #fi
       #export NETWORK_PROVIDER=$$NETWORK_PROVIDER
+
+      export IP_K0S1=$$(host k0s-1 | grep "has address" | awk '{print $$4}' | tail -1)
+      export IP_K0S2=$$(host k0s-2 | grep "has address" | awk '{print $$4}' | tail -1)
+      export IP_K0S3=$$(host k0s-3 | grep "has address" | awk '{print $$4}' | tail -1)
+
+      case "$$HOSTNAME" in
+        "k0s-1")
+            export ADVERTISE_IP=$$IP_K0S1
+            export ETCD_INITIAL_CLUSTER="$$HOSTNAME=https://$$IP:2380,k0s-2=https://$$IP_K0S2:2380,k0s-3=https://$$IP_K0S3:2380"
+            ;;
+        "k0s-2")
+            export ADVERTISE_IP=$$IP_K0S2
+            export ETCD_INITIAL_CLUSTER="$$HOSTNAME=https://$$IP:2380,k0s-1=https://$$IP_K0S1:2380,k0s-3=https://$$IP_K0S3:2380"
+            ;;
+        "k0s-3")
+            export ADVERTISE_IP=$$IP_K0S3
+            export ETCD_INITIAL_CLUSTER="$$HOSTNAME=https://$$IP:2380,k0s-1=https://$$IP_K0S1:2380,k0s-2=https://$$IP_K0S2:2380"
+            ;;
+      esac
 
       mkdir -p /run/k0s
       mkdir -p /var/lib/k0s/pki/etcd
@@ -170,15 +188,10 @@ x-service: &service
 
       export ETCD_INITIAL_CLUSTER_TOKEN=k0s-etcd-cluster
 
-      export IP_K0S1=$$(host k0s-1 | awk '{print $$4}')
-      export IP_K0S2=$$(host k0s-2 | awk '{print $$4}')
-      export IP_K0S3=$$(host k0s-3 | awk '{print $$4}')
-
       # provide dns names instead\without of ips = remote error: tls: bad certificate
       # https://github.com/etcd-io/etcd/issues/8603
       # https://etcd.io/docs/v3.3/op-guide/security/#with-peer-certificate-authentication-i-receive-certificate-is-valid-for-127001-not-my_ip
       # https://etcd.io/docs/v3.4/op-guide/clustering/
-      export ETCD_INITIAL_CLUSTER="k0s-1=https://k0s-1:2380,k0s-2=https://k0s-2:2380,k0s-3=https://k0s-3:2380,k0s-1=https://$$IP_K0S1:2380,k0s-2=https://$$IP_K0S2:2380,k0s-3=https://$$IP_K0S3:2380"
 
       # TODO: check with etcdctl if cluster already exists
       # however node joined into cluster after restart even with value 'new'

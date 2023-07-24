@@ -28,7 +28,7 @@ services:
       - /var/log:/var/log
       - /run:/run
     #pid: host
-    uts: host
+    #uts: host
     network_mode: host
     secrets:
       - worker.token

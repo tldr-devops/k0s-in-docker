@@ -17,7 +17,7 @@ Alternatively, you can consider running Kubernetes within Kubernetes using the f
 - [Kubernetes-in-Kubernetes](https://github.com/kubefarm/kubernetes-in-kubernetes)
 
 Time track:
-- [Filipp Frizzy](https://github.com/Friz-zy/): 46h 05m
+- [Filipp Frizzy](https://github.com/Friz-zy/): 50h 55m
 
 ### About the Author
 
@@ -72,7 +72,6 @@ Optional create worker join token if you don't use static pregenerated one
 
 3) start kubelet
 ```
-export HOSTNAME=$(hostname)
 # for calico
 modprobe ipt_ipvs xt_addrtype ip6_tables \
 ip_tables nf_conntrack_netlink xt_u32 \
@@ -108,12 +107,20 @@ Wait untill all k0s containers up and running
 ```
 docker stack ps k0s
 docker service ls
-docker service exec k0s-1 k0s kubectl get --raw='/livez?verbose'
 ```
 
 4) start kubelet
+
+Docker Swarm doesn't support privileged mode so run it with Compose
 ```
-docker stack deploy --compose-file kubelet.yml k0s
+# for calico
+modprobe ipt_ipvs xt_addrtype ip6_tables \
+ip_tables nf_conntrack_netlink xt_u32 \
+xt_icmp xt_multiport xt_set vfio-pci \
+xt_bpf ipt_REJECT ipt_set xt_icmp6 \
+xt_mark ip_set ipt_rpfilter \
+xt_rpfilter xt_conntrack
+docker compose -f kubelet.yml up -d
 ```
 
 ## Known problems
@@ -128,9 +135,13 @@ ETCD cluster need some time (5 mins?) to detect hard powered off member.
 
 Single etcd node should be at least restarted with new parameters to become a cluster with two other nodes.
 
-### Docker Swarm doesn't resolve IP of container into DNS name
+### * Docker Swarm doesn't resolve IP of container into DNS name
 Docker Swarm doesn't resolve IP of container into DNS name while container health is not `healthy`.
 As we need DNS resolution for getting containers up, I disabled healthcheck =(
+
+### * ETCD in Docker Swarm produce `remote error: tls: bad certificate`
+ETCD peer certificate contain only one ip while in swarm container name resolved into other service ip.
+Issue: https://github.com/k0sproject/k0s/issues/3318. Solution: use `deploy.endpoint_mode: dnsrr` config.
 
 ### * Worker kubeproxy & coredns work only with network 'bridge' or 'host'
 
