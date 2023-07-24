@@ -5,6 +5,8 @@
 
 Based on [k0s-in-docker](https://docs.k0sproject.io/v1.27.1+k0s.0/k0s-in-docker/).
 
+Status: experimental. Currently kube-proxy (kubelet component) doesn't work on hosts with docker swarm possibly because of iptables conflict.
+
 Pro:
 - Easier management and rolling updates of control components with Docker Swarm, including automatic migration to other hosts in case of failure.
 
@@ -17,7 +19,7 @@ Alternatively, you can consider running Kubernetes within Kubernetes using the f
 - [Kubernetes-in-Kubernetes](https://github.com/kubefarm/kubernetes-in-kubernetes)
 
 Time track:
-- [Filipp Frizzy](https://github.com/Friz-zy/): 50h 55m
+- [Filipp Frizzy](https://github.com/Friz-zy/): 55h 45m
 
 ### About the Author
 
@@ -53,22 +55,23 @@ Thank you for considering supporting my work. Your involvement and contributions
 1) generate secrets (only once per cluster).
 This command populate `./secrets` directory near yaml files and exit with code 0
 ```
-docker compose -f generate-secrets.yml up
+docker-compose -f generate-secrets.yml up
+docker-compose -f generate-secrets.yml down
 ```
 
 2) start controller
 ```
-docker compose -f controller.yml up -d
+docker-compose -f controller.yml up -d
 ```
 
 Wait untill all k0s containers up and running
 ```
-docker compose -f controller.yml ps
-docker compose -f controller.yml exec k0s-1 k0s kubectl get --raw='/livez?verbose'
+docker-compose -f controller.yml ps
+docker-compose -f controller.yml exec k0s-1 k0s kubectl get --raw='/livez?verbose'
 ```
 
 Optional create worker join token if you don't use static pregenerated one
-`docker compose -f controller.yml exec k0s-1 k0s token create --role worker > ./secrets/worker.token`
+`docker-compose -f controller.yml exec k0s-1 k0s token create --role worker > ./secrets/worker.token`
 
 3) start kubelet
 ```
@@ -79,7 +82,7 @@ xt_icmp xt_multiport xt_set vfio-pci \
 xt_bpf ipt_REJECT ipt_set xt_icmp6 \
 xt_mark ip_set ipt_rpfilter \
 xt_rpfilter xt_conntrack
-docker compose -f kubelet.yml up -d
+docker-compose -f kubelet.yml up -d
 ```
 
 ### Docker Swarm
@@ -90,7 +93,7 @@ docker compose -f kubelet.yml up -d
 1) generate secrets (only once per cluster).
 This command populate `./secrets` directory near yaml files and exit with code 0
 ```
-docker compose -f generate-secrets.yml up
+docker-compose -f generate-secrets.yml up
 ```
 
 2) [setup docker swarm](https://docs.docker.com/engine/reference/commandline/swarm_init/)
@@ -111,16 +114,19 @@ docker service ls
 
 4) start kubelet
 
-Docker Swarm doesn't support privileged mode so run it with Compose
+Load necessary kernel modules for Calico if you use it
 ```
-# for calico
 modprobe ipt_ipvs xt_addrtype ip6_tables \
 ip_tables nf_conntrack_netlink xt_u32 \
 xt_icmp xt_multiport xt_set vfio-pci \
 xt_bpf ipt_REJECT ipt_set xt_icmp6 \
 xt_mark ip_set ipt_rpfilter \
 xt_rpfilter xt_conntrack
-docker compose -f kubelet.yml up -d
+```
+
+Docker Swarm doesn't support privileged mode so run it with Compose
+```
+docker-compose -f kubelet.yml up -d
 ```
 
 ## Known problems
