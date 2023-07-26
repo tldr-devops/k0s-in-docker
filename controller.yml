@@ -49,6 +49,7 @@ x-service: &service
       #- "6443:6443"
     #network_mode: "bridge"
     environment:
+      externalAddress: ${externalAddress}
       K0S_CONFIG: |-
         apiVersion: k0s.k0sproject.io/v1beta1
         kind: Cluster
@@ -56,8 +57,9 @@ x-service: &service
           name: k0s
         spec:
           api:
-            externalAddress: k0s # external LB for cluster, should be also in sans. Can't be in loopback range
+            externalAddress: $$externalAddress # external LB for cluster, should be also in sans. Can't be in loopback range
             sans:
+              - $$externalAddress
               - 127.0.0.1
               - localhost
               - kubernetes

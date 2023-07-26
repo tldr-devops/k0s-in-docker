@@ -19,7 +19,7 @@ Alternatively, you can consider running Kubernetes within Kubernetes using the f
 - [Kubernetes-in-Kubernetes](https://github.com/kubefarm/kubernetes-in-kubernetes)
 
 Time track:
-- [Filipp Frizzy](https://github.com/Friz-zy/): 55h 45m
+- [Filipp Frizzy](https://github.com/Friz-zy/): 56h 50m
 
 ### About the Author
 
@@ -57,6 +57,7 @@ This command populate `./secrets` directory near yaml files and exit with code 0
 ```
 docker-compose -f generate-secrets.yml up
 docker-compose -f generate-secrets.yml down
+echo "externalAddress=$(hostname -i)" >> .env
 ```
 
 2) start controller
@@ -74,14 +75,19 @@ Optional create worker join token if you don't use static pregenerated one
 `docker-compose -f controller.yml exec k0s-1 k0s token create --role worker > ./secrets/worker.token`
 
 3) start kubelet
+
+Load necessary kernel modules for Calico if you use it
 ```
-# for calico
 modprobe ipt_ipvs xt_addrtype ip6_tables \
 ip_tables nf_conntrack_netlink xt_u32 \
 xt_icmp xt_multiport xt_set vfio-pci \
 xt_bpf ipt_REJECT ipt_set xt_icmp6 \
 xt_mark ip_set ipt_rpfilter \
 xt_rpfilter xt_conntrack
+```
+
+Start Kubelet
+```
 docker-compose -f kubelet.yml up -d
 ```
 
@@ -94,15 +100,18 @@ docker-compose -f kubelet.yml up -d
 This command populate `./secrets` directory near yaml files and exit with code 0
 ```
 docker-compose -f generate-secrets.yml up
+docker-compose -f generate-secrets.yml down
+echo "externalAddress=$(hostname -i)" >> .env
 ```
 
 2) [setup docker swarm](https://docs.docker.com/engine/reference/commandline/swarm_init/)
 ```
-docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
+docker swarm init --advertise-addr $(hostname -i)
 ```
 
 3) start controller
 ```
+export $(grep -v '^#' .env | xargs -d '\n')
 docker stack deploy --compose-file controller.yml k0s
 ```
 

@@ -43,7 +43,7 @@ services:
           name: k0s
         spec:
           api:
-            externalAddress: localhost
+            externalAddress: ${externalAddress}
     entrypoint: ["/bin/bash", "-c"]
     command:
     - |
