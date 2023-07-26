@@ -5,7 +5,7 @@
 
 Based on [k0s-in-docker](https://docs.k0sproject.io/v1.27.1+k0s.0/k0s-in-docker/).
 
-Status: experimental, it works but upgrade\rollback of controller and any deployments over basic setup hasn't tasted yet.
+Status: experimental, it works but upgrade\rollback of controller and any deployments over basic setup hasn't tested yet.
 
 Pro:
 - Easier management and rolling updates of control components with Docker Swarm, including automatic migration to other hosts in case of failure.
