@@ -207,44 +207,40 @@ x-service: &service
 
       k0s controller --config=/etc/k0s/config.yaml --enable-metrics-scraper --token-file /run/secrets/controller.token #--enable-dynamic-config
 
-    # WARNING: Docker Swarm doesn't resolve IP of container into DNS name
-    # while container health is not healthy. As we need DNS resolution
-    # for getting containers up, I disabled healthcheck =(
-
     # https://docs.docker.com/compose/compose-file/compose-file-v3/#healthcheck
     # https://docs.docker.com/engine/reference/builder/#healthcheck
-    #healthcheck:
-      #test: |
-        ## kube-apiserver
-        #curl -sk https://127.0.0.1:6443 | grep -q Status || exit 1
-        ## konnectivity
-        #curl -sk http://127.0.0.1:8092 | grep -q 404 || exit 1
-        ## k0s
-        #curl -sk https://127.0.0.1:9443 | grep -q 404 || exit 1
-        ## kube-scheduler
-        #curl -sk https://127.0.0.1:10259 | grep -q Status || exit 1
-        ## kube-controller
-        #curl -sk https://127.0.0.1:10257 | grep -q Status || exit 1
-        ## etcd
-        #curl -s --cacert /var/lib/k0s/pki/etcd/ca.crt \
-        #--key /var/lib/k0s/pki/etcd/server.key \
-        #--cert /var/lib/k0s/pki/etcd/server.crt \
-        #https://127.0.0.1:2379/health | grep -q '"health":"true"' || exit 1
+    healthcheck:
+      test: |
+        # kube-apiserver
+        curl -sk https://127.0.0.1:6443 | grep -q Status || exit 1
+        # konnectivity
+        curl -sk http://127.0.0.1:8092 | grep -q 404 || exit 1
+        # k0s
+        curl -sk https://127.0.0.1:9443 | grep -q 404 || exit 1
+        # kube-scheduler
+        curl -sk https://127.0.0.1:10259 | grep -q Status || exit 1
+        # kube-controller
+        curl -sk https://127.0.0.1:10257 | grep -q Status || exit 1
+        # etcd
+        curl -s --cacert /var/lib/k0s/pki/etcd/ca.crt \
+        --key /var/lib/k0s/pki/etcd/server.key \
+        --cert /var/lib/k0s/pki/etcd/server.crt \
+        https://127.0.0.1:2379/health | grep -q '"health":"true"' || exit 1
 
-        ## https://kubernetes.io/docs/reference/using-api/health-checks/
-        ## this command check health of whole cluster and etcd
-        ## in case of etcd cluster fail it returns 'livez check failed'
-        ## even for worked node
-        ##k0s kubectl get --raw='/livez?verbose' | grep -q 'livez check passed' || exit 1
-      ## interval in which the healthcheck process will execute
-      #interval: 5s
-      ## time duration to wait for a healthcheck
-      #timeout: 5s
-      ## define the number of tries to implement the health check after failure
-      #retries: 3
-      ## initialization time for containers that need time to bootstrap
-      ## it should be increased if etcd will need time to sync big amount of data
-      #start_period: 70s
+        # https://kubernetes.io/docs/reference/using-api/health-checks/
+        # this command check health of whole cluster and etcd
+        # in case of etcd cluster fail it returns 'livez check failed'
+        # even for worked node
+        #k0s kubectl get --raw='/livez?verbose' | grep -q 'livez check passed' || exit 1
+      # interval in which the healthcheck process will execute
+      interval: 5s
+      # time duration to wait for a healthcheck
+      timeout: 5s
+      # define the number of tries to implement the health check after failure
+      retries: 3
+      # initialization time for containers that need time to bootstrap
+      # it should be increased if etcd will need time to sync big amount of data
+      start_period: 70s
 
 services:
   k0s-1:
@@ -283,7 +279,7 @@ services:
       - 6443:6443
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 60s

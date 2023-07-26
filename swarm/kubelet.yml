@@ -1,0 +1,92 @@
+# https://github.com/kubernetes-retired/kubernetes-anywhere/blob/master/phase2/ignition/vanilla/kubelet.service
+# https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/
+# https://docs.k0sproject.io/v1.27.1+k0s.0/worker-node-config/
+version: "3.9"
+
+secrets:
+  worker.token:
+    file: ./secrets/worker.token
+  #ca.crt:
+  #  file: ./secrets/ca.crt
+
+services:
+  kubelet:
+    image: 'docker.io/k0sproject/k0s:v1.27.1-k0s.0' # docker.io/k0sproject/k0s:latest
+    #hostname: ${HOSTNAME}
+    #container_name: kubelet
+    restart: unless-stopped
+    privileged: true
+    cap_add:
+      - ALL
+    deploy:
+      mode: global
+    volumes:
+      - /var/lib/k0s
+      # for kubelet persistent instead of volumes
+      # - /data/kubelet:/var/lib/k0s
+      - /dev:/dev
+      - /var/log:/var/log
+      - /run:/run
+    #pid: host
+    #uts: host
+    network_mode: host
+    secrets:
+      - worker.token
+      #- ca.crt
+    environment:
+      LABELS: "" # "--labels "
+      TAINTS: "" # "--taints "
+      K0S_CONFIG: |-
+        apiVersion: k0s.k0sproject.io/v1beta1
+        kind: Cluster
+        metadata:
+          name: k0s
+        spec:
+          api:
+            externalAddress: ${externalAddress}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+    - |
+      #mkdir -p /var/lib/k0s/pki
+      #cat /run/secrets/ca.crt > /var/lib/k0s/pki/ca.crt
+
+      # echo "127.0.0.1 k0s" >> /etc/hosts
+      echo "$$(hostname -i) k0s kubernetes" >> /etc/hosts
+
+      #if [[ ! -f /usr/bin/calicoctl ]]; then
+        #curl -sL https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64 -o /usr/bin/calicoctl
+        #ln -s /usr/bin/calicoctl /usr/bin/kubectl-calico
+        #chmod +x /usr/bin/calicoctl
+      #fi
+
+      bash /entrypoint.sh
+      #export TINI_SUBREAPER=true # if you run kubelet in host pid namespace = tiny supervisor doesn't have PID 1
+      k0s worker --token-file /run/secrets/worker.token $$LABELS $$TAINTS
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "2"
+    #healthcheck:
+      #test: |
+        #curl -s http://localhost:10255/healthz
+        ## https://www.deepnetwork.com/blog/2020/01/13/kubelet-api.html
+        ## https://stackoverflow.com/questions/35075195/is-there-api-documentation-for-kubelet-api
+      ## interval in which the healthcheck process will execute
+      #interval: 5s
+      ## time duration to wait for a healthcheck
+      #timeout: 5s
+      ## define the number of tries to implement the health check after failure
+      #retries: 5
+      ## initialization time for containers that need time to bootstrap
+      #start_period: 60s
+
+#docker run -d --name k0s-worker1 \
+#--hostname docker-01 --privileged \
+#-v /var/lib/k0s \
+#-v /dev:/dev \
+#-v /sys:/sys:ro \
+#-v /run:/run \
+#-v /var/run:/var/run \
+#--network host \
+#docker.io/k0sproject/k0s:v1.27.1-k0s.0 k0s worker $token

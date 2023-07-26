@@ -5,7 +5,7 @@
 
 Based on [k0s-in-docker](https://docs.k0sproject.io/v1.27.1+k0s.0/k0s-in-docker/).
 
-Status: experimental. Currently kube-proxy (kubelet component) doesn't work on hosts with docker swarm possibly because of iptables conflict.
+Status: experimental, it works but upgrade\rollback of controller and any deployments over basic setup hasn't tasted yet.
 
 Pro:
 - Easier management and rolling updates of control components with Docker Swarm, including automatic migration to other hosts in case of failure.
@@ -19,7 +19,7 @@ Alternatively, you can consider running Kubernetes within Kubernetes using the f
 - [Kubernetes-in-Kubernetes](https://github.com/kubefarm/kubernetes-in-kubernetes)
 
 Time track:
-- [Filipp Frizzy](https://github.com/Friz-zy/): 56h 50m
+- [Filipp Frizzy](https://github.com/Friz-zy/): 57h 50m
 
 ### About the Author
 
@@ -51,6 +51,11 @@ Thank you for considering supporting my work. Your involvement and contributions
 ## Setup
 
 ### Docker Compose
+
+0) change directory
+```
+cd compose
+```
 
 1) generate secrets (only once per cluster).
 This command populate `./secrets` directory near yaml files and exit with code 0
@@ -96,12 +101,18 @@ docker-compose -f kubelet.yml up -d
 * [Short intro into Swarm](https://gabrieltanner.org/blog/docker-swarm/)
 * [Extended tutorial](https://dockerswarm.rocks/)
 
+0) change directory
+```
+cd swarm
+```
+
 1) generate secrets (only once per cluster).
 This command populate `./secrets` directory near yaml files and exit with code 0
 ```
 docker-compose -f generate-secrets.yml up
 docker-compose -f generate-secrets.yml down
 echo "externalAddress=$(hostname -i)" >> .env
+echo "stackName=k0s" >> .env
 ```
 
 2) [setup docker swarm](https://docs.docker.com/engine/reference/commandline/swarm_init/)
@@ -112,12 +123,18 @@ docker swarm init --advertise-addr $(hostname -i)
 3) start controller
 ```
 export $(grep -v '^#' .env | xargs -d '\n')
-docker stack deploy --compose-file controller.yml k0s
+docker stack deploy --compose-file controller.yml "$stackName"
 ```
+
+Deploy haproxy in compose on each controller host
+```
+docker-compose -f haproxy.yml up -d
+```
+(kube-proxy doesn't work properly on the same host with haproxy in swarm mode)
 
 Wait untill all k0s containers up and running
 ```
-docker stack ps k0s
+docker stack ps "$stackName"
 docker service ls
 ```
 

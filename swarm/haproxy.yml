@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  # https://www.haproxy.com/blog/haproxy-on-docker-swarm-load-balancing-and-dns-service-discovery/
+  haproxy:
+    image: haproxytech/haproxy-debian
+    #hostname: haproxy
+    #container_name: haproxy
+    ports:
+      - 6443:6443
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 60s
+    networks:
+      - k0s
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "2"
+    environment:
+      CONFIG: |-
+        global
+            log          fd@2 local2
+            chroot       /var/lib/haproxy
+            pidfile      /var/run/haproxy.pid
+            maxconn      4000
+            user         haproxy
+            group        haproxy
+            stats socket /var/lib/haproxy/stats expose-fd listeners
+            master-worker
+
+        resolvers docker
+            nameserver dns1 127.0.0.11:53
+            resolve_retries 3
+            timeout resolve 3s
+            timeout retry   1s
+            hold other      10s
+            hold refused    10s
+            hold nx         10s
+            hold timeout    10s
+            hold valid      10s
+            hold obsolete   10s
+
+        defaults
+            timeout connect 10s
+            timeout client 30s
+            timeout server 30s
+            log global
+            mode http
+            option httplog
+
+        frontend  stats
+            bind *:80
+            default_backend stats
+
+        backend stats
+            stats enable
+            stats uri /
+            stats refresh 15s
+            stats show-legends
+            stats show-node
+
+        frontend k0s-api
+            mode tcp
+            bind :6443
+            default_backend k0s-api
+
+        backend k0s-api
+            mode tcp
+            balance roundrobin
+            server k0s-1 k0s-1:6443 check resolvers docker init-addr libc,none
+            server k0s-2 k0s-2:6443 check resolvers docker init-addr libc,none
+            server k0s-3 k0s-3:6443 check resolvers docker init-addr libc,none
+
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+    - |
+      if [ ! -z "$$CONFIG" ]; then
+        echo -n "$$CONFIG"  > /usr/local/etc/haproxy/haproxy.cfg
+        echo >> /usr/local/etc/haproxy/haproxy.cfg
+      fi
+      bash /docker-entrypoint.sh haproxy -f /usr/local/etc/haproxy/haproxy.cfg
+
+networks:
+  k0s:
+    name: ${stackName}
+    external: true
